@@ -13,11 +13,30 @@ class MSQueue<E> : Queue<E> {
     }
 
     override fun enqueue(element: E) {
-        TODO("implement me")
+        while (true) {
+            val node = Node(element)
+            val currentTail = tail.value
+            val next = currentTail.next
+            if (next.compareAndSet(null, node)) {
+                tail.compareAndSet(currentTail, node)
+                return
+            } else {
+                tail.compareAndSet(currentTail, next.value!!)
+            }
+        }
     }
 
     override fun dequeue(): E? {
-        TODO("implement me")
+        while (true) {
+            val currentHead = head.value
+            val currentHeadNext = currentHead.next
+
+            val currentHeadValue = currentHeadNext.value ?: return null
+
+            if (head.compareAndSet(currentHead, currentHeadValue)) {
+                return currentHeadValue.element
+            }
+        }
     }
 
     // FOR TEST PURPOSE, DO NOT CHANGE IT.

@@ -197,3 +197,52 @@ To test your solution, please run:
 
 * `./gradlew test --tests AtomicArrayWithCAS2Test` on Linux or MacOS
 * `gradlew test --tests AtomicArrayWithCAS2Test` on Windows
+
+
+## Day 4
+
+### Flat-combining queue
+
+In [`src/day4/FlatCombiningQueue.kt`](src/day4/FlatCombiningQueue.kt), implement a concurrent queue via the
+_flat-combining_ technique,
+using a sequential queue under the hood. You might be interested in the corresponding
+[academic paper]((https://dl.acm.org/doi/pdf/10.1145/1810479.1810540?casa_token=Yo13gxOeFhwAAAAA:qS33gvUFNhI4t_2ioHnZz0egK8PFq0Mg7MT0ma1-26aeQYKk7aZBzEHEY6iFMiu-GEmzsBMuSibDkg))
+
+To test your solution, please run:
+
+* `./gradlew test --tests FlatCombiningQueueTest` on Linux or MacOS
+* `gradlew test --tests FlatCombiningQueueTest` on Windows
+
+### Single-Writer Hash Table
+
+In [`src/day4/SingleWriterHashTable.kt`](src/day4/SingleWriterHashTable.kt), implement a concurrent hash table
+that works under the "single-writer" assumption. This way, `put(..)` and `remove(..)` can be called only in one thread,
+so only `get(..)`-s can be called concurrently.
+
+To test your solution, please run:
+
+* `./gradlew test --tests SingleWriterHashTableTest` on Linux or MacOS
+* `gradlew test --tests SingleWriterHashTableTest` on Windows
+
+
+### Concurrent Hash Table without Resize
+
+In [`src/day4/ConcurrentHashTableWithoutResize.kt`](src/day4/ConcurrentHashTableWithoutResize.kt), 
+implement a concurrent hash table that never requires resizing. 
+Copy the code from [`src/day4/SingleWriterHashTable.kt`](src/day4/SingleWriterHashTable.kt)
+and use `CAS`-s to perform all updates.
+
+To test your solution, please run:
+
+* `./gradlew test --tests ConcurrentHashTableWithoutResizeTest` on Linux or MacOS
+* `gradlew test --tests ConcurrentHashTableWithoutResizeTest` on Windows
+
+### Concurrent Hash Table
+
+In [`src/day4/ConcurrentHashTable.kt`](src/day4/ConcurrentHashTable.kt),
+implement a concurrent hash table without restrictions. Enjoy the final task!
+
+To test your solution, please run:
+
+* `./gradlew test --tests ConcurrentHashTableTest` on Linux or MacOS
+* `gradlew test --tests ConcurrentHashTableTest` on Windows

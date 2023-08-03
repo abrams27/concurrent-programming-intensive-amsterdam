@@ -15,18 +15,33 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
     }
 
     override fun enqueue(element: E) {
-        // TODO: When adding a new node, check whether
-        // TODO: the previous tail is logically removed.
-        // TODO: If so, remove it physically from the linked list.
-        TODO("Implement me!")
+        while (true) {
+            val currentTail = tail.value
+            val node = Node(element, currentTail)
+            val next = currentTail.next
+            if (next.compareAndSet(null, node)) {
+                tail.compareAndSet(currentTail, node)
+                if (currentTail.extractedOrRemoved) {
+                    currentTail.remove()
+                }
+                return
+            } else {
+                tail.compareAndSet(currentTail, next.value!!)
+            }
+        }
     }
 
     override fun dequeue(): E? {
-        // TODO: After moving the `head` pointer forward,
-        // TODO: mark the node that contains the extracting
-        // TODO: element as "extracted or removed", restarting
-        // TODO: the operation if this node has already been removed.
-        TODO("Implement me!")
+        while (true) {
+            val currentHead = head.value
+            val currentHeadNext = currentHead.next.value ?: return null
+
+            if (head.compareAndSet(currentHead, currentHeadNext)) {
+                if (currentHeadNext.remove()) {
+                    return currentHeadNext.element
+                }
+            }
+        }
     }
 
     override fun remove(element: E): Boolean {
@@ -84,10 +99,6 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
         val next = atomic<Node<E>?>(null)
         val prev = atomic(prev)
 
-        /**
-         * TODO: Both [dequeue] and [remove] should mark
-         * TODO: nodes as "extracted or removed".
-         */
         private val _extractedOrRemoved = atomic(false)
         val extractedOrRemoved get() = _extractedOrRemoved.value
 
@@ -104,6 +115,7 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
             // TODO: First, you need to mark the node as "extracted or removed".
             // TODO: On success, this node is logically removed, and the
             // TODO: operation should return `true` at the end.
+            val removed = markExtractedOrRemoved()
             // TODO: In the second phase, the node should be removed
             // TODO: physically, updating the `next` field of the previous
             // TODO: node to `this.next.value`.
@@ -114,7 +126,23 @@ class MSQueueWithConstantTimeRemove<E> : QueueWithRemove<E> {
             // TODO: it is totally fine to have a bounded number of removed nodes
             // TODO: in the linked list, especially when it significantly simplifies
             // TODO: the algorithm.
-            TODO("Implement me!")
+
+            val nextNode = next.value
+            val prevNode = prev.value
+
+            if (nextNode != null && prevNode != null) {
+                prevNode.next.value = nextNode
+                nextNode.prev.value = prevNode
+
+                if (nextNode.extractedOrRemoved) {
+                    nextNode.remove()
+                }
+                if (prevNode.extractedOrRemoved) {
+                    prevNode.remove()
+                }
+            }
+
+            return removed
         }
     }
 }

@@ -16,8 +16,17 @@ class AtomicArrayWithCAS2Simplified<E : Any>(size: Int, initialValue: E) {
     }
 
     fun get(index: Int): E {
-        // TODO: the cell can store CAS2Descriptor
-        return array[index].value as E
+        val value = array[index].value
+        return if (value is AtomicArrayWithCAS2SingleWriter<*>.CAS2Descriptor) {
+            val descriptor = value as AtomicArrayWithCAS2SingleWriter<E>.CAS2Descriptor
+
+            when (descriptor.status.value) {
+                AtomicArrayWithCAS2SingleWriter.Status.UNDECIDED, AtomicArrayWithCAS2SingleWriter.Status.FAILED -> if (descriptor.index1 == index) descriptor.expected1 else descriptor.expected2
+                AtomicArrayWithCAS2SingleWriter.Status.SUCCESS -> if (descriptor.index1 == index) descriptor.update1 else descriptor.update2
+            }
+        } else {
+            value as E
+        }
     }
 
     fun cas2(
@@ -34,18 +43,69 @@ class AtomicArrayWithCAS2Simplified<E : Any>(size: Int, initialValue: E) {
     }
 
     inner class CAS2Descriptor(
-        private val index1: Int,
-        private val expected1: E,
-        private val update1: E,
-        private val index2: Int,
-        private val expected2: E,
-        private val update2: E
+        val index1: Int,
+        val expected1: E,
+        val update1: E,
+        val index2: Int,
+        val expected2: E,
+        val update2: E
     ) {
         val status = atomic(UNDECIDED)
 
         fun apply() {
-            // TODO: Install the descriptor, update the status, and update the cells;
-            // TODO: create functions for each of these three phases.
+            val installStatus= installDescriptor()
+            updateStatus(installStatus)
+            updateCells()
+        }
+
+        private fun installDescriptor(): Status {
+            if (array[index1].value == expected1 && array[index2].value == expected2) {
+                array[index1].value = this
+                array[index2].value = this
+                return SUCCESS
+            } else if (array[index1].value is AtomicArrayWithCAS2Simplified<*>.CAS2Descriptor) {
+                val descriptor = array[index1].value as AtomicArrayWithCAS2Simplified<E>.CAS2Descriptor
+                if (descriptor.status.value == FAILED) {
+                    if (array[index1].value == expected1 && array[index2].value == expected2) {
+                        array[index1].value = this
+                        return SUCCESS
+                    }
+                } else if (descriptor.status.value == UNDECIDED) {
+                    if (array[index1].value == descriptor.expected1 && array[index2].value == descriptor.expected2) {
+                        array[index1].value = descriptor.update1
+                        array[index2].value = descriptor.update2
+                        descriptor.status.value = SUCCESS
+                        return SUCCESS
+                    }
+                } else {
+                    SUCCESS
+                }
+            } else if (array[index2].value is AtomicArrayWithCAS2Simplified<*>.CAS2Descriptor) {
+                val descriptor = array[index2].value as AtomicArrayWithCAS2Simplified<E>.CAS2Descriptor
+                if (descriptor.status.value == FAILED) {
+                    if (array[index1].value == expected1 && array[index2].value == expected2) {
+                        array[index2].value = this
+                        return SUCCESS
+                    }
+                } else {
+                    SUCCESS
+                }
+            } else {
+                return FAILED
+            }
+
+            return FAILED
+        }
+
+        private fun updateStatus(installStatus: Status) {
+            status.value = installStatus
+        }
+
+        private fun updateCells() {
+            if (status.value == SUCCESS) {
+                array[index1].compareAndSet(this, update1)
+                array[index2].compareAndSet(this, update2)
+            }
         }
     }
 
